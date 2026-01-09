@@ -218,14 +218,12 @@ async function loadMyAttendance() {
         <td>${escapeHtml(e.title || "")}</td>
         <td>
           <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
-            <button class="my-att-btn ${
-                status === "present" ? "is-present" : ""
+            <button class="my-att-btn ${status === "present" ? "is-present" : ""
             }"
               data-event-id="${eventId}" data-status="present">◎</button>
             <button class="my-att-btn ${status === "late" ? "is-late" : ""}"
               data-event-id="${eventId}" data-status="late">〇</button>
-            <button class="my-att-btn ${
-                status === "undecided" ? "is-undecided" : ""
+            <button class="my-att-btn ${status === "undecided" ? "is-undecided" : ""
             }"
               data-event-id="${eventId}" data-status="undecided">△</button>
             <button class="my-att-btn ${status === "absent" ? "is-absent" : ""}"
@@ -278,9 +276,8 @@ async function loadMyAttendance() {
     html += `
       <details class="past-events" ${upcomingRows ? "" : "open"}>
         <summary>過去のイベントを表示 / 非表示</summary>
-        ${
-            pastRows
-                ? `<table class="my-att-table" style="margin-top: 8px;">
+        ${pastRows
+            ? `<table class="my-att-table" style="margin-top: 8px;">
                      <thead>
                        <tr>
                          <th>日付</th>
@@ -292,7 +289,7 @@ async function loadMyAttendance() {
                        ${pastRows}
                      </tbody>
                    </table>`
-                : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
+            : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
         }
       </details>`;
 
@@ -345,18 +342,24 @@ async function ensureMember() {
 
 // イベント一覧の読み込み
 async function loadEventList() {
-    console.log("loadEventList() 開始");
-    const listDiv = document.getElementById("event-list");
+    console.log("loadEventList() 開始")
+    const listDiv = document.getElementById("event-list")
     if (!listDiv) {
         console.error("event-list 要素が見つかりません");
         return;
     }
 
     listDiv.innerHTML = "読み込み中…";
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
 
     try {
         // イベント一覧を日付順で取得
-        const snap = await db.collection("events").orderBy("date").get();
+        const [snap, membersSnap, attSnap] = await Promise.all([
+            db.collection("events").orderBy("date").get(),
+            db.collection("members").get(),
+            db.collection("attendance").get(),
+        ]);
         console.log("events 取得件数:", snap.size);
 
         if (snap.empty) {
@@ -364,14 +367,31 @@ async function loadEventList() {
             return;
         }
 
-        // 出欠データをまとめて取得（◎・◯用）
-        // Firestore には status = "present" / "late" ... で保存されている前提
-        const attSnap = await db.collection("attendance").get();
+        const membersMap = {};
+        membersSnap.forEach((doc) => {
+            const m = doc.data();
+            membersMap[doc.id] = m.name || "名前未設定";
+        });
+
+        const miniAttendanceMap = {};
         const countMap = {}; // eventId -> { present, late }
 
         attSnap.forEach((doc) => {
             const a = doc.data();
             if (!a.eventId || !a.status) return;
+
+            if (!miniAttendanceMap[a.eventId]) {
+                miniAttendanceMap[a.eventId] = {
+                    present: [],
+                    late: [],
+                    undecided: [],
+                    absent: [],
+                };
+            }
+            const memberName = membersMap[a.lineUserId] || "名前未設定";
+            if (miniAttendanceMap[a.eventId][a.status]) {
+                miniAttendanceMap[a.eventId][a.status].push(memberName);
+            }
 
             if (!countMap[a.eventId]) {
                 countMap[a.eventId] = { present: 0, late: 0 };
@@ -383,12 +403,33 @@ async function loadEventList() {
             }
         });
 
-        // 今日の日付（00:00 固定）を作成
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
         let upcomingRows = ""; // 今日以降
         let pastRows = ""; // 過去
+        const upcomingRowList = [];
+
+        const miniAttendanceHtml = (eventId) => {
+            const statusRows = [
+                { key: "present", label: "◎" },
+                { key: "late", label: "〇" },
+                { key: "undecided", label: "△" },
+                { key: "absent", label: "✖" },
+            ];
+            return statusRows
+                .map(({ key, label }) => {
+                    const names = (miniAttendanceMap[eventId]?.[key] || [])
+                        .slice()
+                        .sort((a, b) => a.localeCompare(b, "ja-JP"));
+                    const nameText = names.length
+                        ? names.map((name) => escapeHtml(name)).join(", ")
+                        : "-";
+                    return `
+            <div class="mini-attendance-row">
+              <span class="mini-attendance-label">${label}</span>
+              <span class="mini-attendance-names">${nameText}</span>
+            </div>`;
+                })
+                .join("");
+        };
 
         snap.forEach((doc) => {
             const data = doc.data();
@@ -421,10 +462,13 @@ async function loadEventList() {
             <div>${escapeHtml(monthDayPart)}</div>
           </td>
           <td class="event-main">
-            <div class="event-title">${escapeHtml(title)}</div>
+           <div class="event-title">${escapeHtml(title)}</div>
             <div class="event-sub">${escapeHtml(time)}　｜　${escapeHtml(
                 place
             )}</div>
+            <div class="mini-attendance">
+              ${miniAttendanceHtml(id)}
+            </div>
           </td>
           <td class="event-count">
             <div>${escapeHtml(countLine1)}</div>
@@ -441,21 +485,29 @@ async function loadEventList() {
             if (baseDateStr) {
                 const d = new Date(baseDateStr);
                 d.setHours(0, 0, 0, 0);
-                if (d < today) isPast = true;
+                if (d < todayDate) isPast = true;
             }
 
             if (isPast) {
                 pastRows += rowHtml;
             } else {
                 upcomingRows += rowHtml;
+                upcomingRowList.push(rowHtml);
             }
         });
 
         // HTML を組み立て
         let html = "";
+        const UPCOMING_VISIBLE_LIMIT = 3;
+        const upcomingVisibleRows = upcomingRowList
+            .slice(0, UPCOMING_VISIBLE_LIMIT)
+            .join("");
+        const upcomingHiddenRows = upcomingRowList
+            .slice(UPCOMING_VISIBLE_LIMIT)
+            .join("");
 
         // これからのイベント（常に表示）
-        if (upcomingRows) {
+        if (upcomingRowList.length > 0) {
             html += `
       <h3 class="event-list-title">これからのイベント</h3>
       <table class="event-table">
@@ -468,17 +520,36 @@ async function loadEventList() {
           </tr>
         </thead>
         <tbody>
-          ${upcomingRows}
+          ${upcomingVisibleRows}
         </tbody>
       </table>`;
+        }
+
+        if (upcomingHiddenRows) {
+            html += `
+      <details class="upcoming-events-toggle">
+        <summary>すべて表示する</summary>
+        <table class="event-table" style="margin-top: 8px;">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>内容</th>
+              <th>参加人数</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${upcomingHiddenRows}
+          </tbody>
+        </table>
+      </details>`;
         }
 
         // 過去のイベント（アコーディオン）
         html += `
       <details class="past-events" ${upcomingRows ? "" : "open"}>
         <summary>過去のイベントを表示 / 非表示</summary>
-        ${
-            pastRows
+        ${pastRows
                 ? `<table class="event-table" style="margin-top: 8px;">
                      <thead>
                        <tr>
@@ -493,7 +564,7 @@ async function loadEventList() {
                      </tbody>
                    </table>`
                 : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
-        }
+            }
       </details>`;
 
         listDiv.innerHTML = html;
@@ -736,35 +807,27 @@ async function loadLineupEditor() {
         <div class="lineup-system-row">
           <label>打順人数
             <select id="lineup-system-select">
-              <option value="NORMAL9"${
-                  system === "NORMAL9" ? " selected" : ""
-              }>9人制</option>
-              <option value="DH10"${
-                  system === "DH10" ? " selected" : ""
-              }>DH制（10人打ち）</option>
-              <option value="DH11"${
-                  system === "DH11" ? " selected" : ""
-              }>DH制（11人打ち）</option>
-              <option value="DH12"${
-                  system === "DH12" ? " selected" : ""
-              }>DH制（12人打ち）</option>
-              <option value="DH13"${
-                  system === "DH13" ? " selected" : ""
-              }>DH制（13人打ち）</option>
-              <option value="DH14"${
-                  system === "DH14" ? " selected" : ""
-              }>DH制（14人打ち）</option>
-              <option value="DH15"${
-                  system === "DH15" ? " selected" : ""
-              }>DH制（15人打ち）</option>
+              <option value="NORMAL9"${system === "NORMAL9" ? " selected" : ""
+            }>9人制</option>
+              <option value="DH10"${system === "DH10" ? " selected" : ""
+            }>DH制（10人打ち）</option>
+              <option value="DH11"${system === "DH11" ? " selected" : ""
+            }>DH制（11人打ち）</option>
+              <option value="DH12"${system === "DH12" ? " selected" : ""
+            }>DH制（12人打ち）</option>
+              <option value="DH13"${system === "DH13" ? " selected" : ""
+            }>DH制（13人打ち）</option>
+              <option value="DH14"${system === "DH14" ? " selected" : ""
+            }>DH制（14人打ち）</option>
+              <option value="DH15"${system === "DH15" ? " selected" : ""
+            }>DH制（15人打ち）</option>
             </select>
           </label>
         </div>
 
         <div class="lineup-publish-row">
           <label>
-            <input type="checkbox" id="lineup-publish-checkbox"${
-                isPublished ? " checked" : ""
+            <input type="checkbox" id="lineup-publish-checkbox"${isPublished ? " checked" : ""
             }>
             オーダーをメンバーに公開する
           </label>
@@ -776,8 +839,8 @@ async function loadLineupEditor() {
           <label>メモ（継投・守備変更など）
             <textarea id="lineup-memo" rows="2"
               placeholder="例: 永久ベンチ→中橋、三振したら#21交代">${escapeHtml(
-                  memo
-              )}</textarea>
+                memo
+            )}</textarea>
           </label>
         </div>
       `;
@@ -838,9 +901,8 @@ function renderLineupRows(system) {
         html += `<td><select class="lineup-player-select">`;
         html += `<option value="">（選手を選択）</option>`;
         lineupCandidates.forEach((m) => {
-            html += `<option value="${m.id}"${
-                m.id === selectedMemberId ? " selected" : ""
-            }>${escapeHtml(m.name)}</option>`;
+            html += `<option value="${m.id}"${m.id === selectedMemberId ? " selected" : ""
+                }>${escapeHtml(m.name)}</option>`;
         });
         html += `</select></td>`;
 
@@ -848,9 +910,8 @@ function renderLineupRows(system) {
         html += `<td><select class="lineup-pos-select">`;
         html += `<option value="">ー</option>`;
         positions.forEach((pos) => {
-            html += `<option value="${pos}"${
-                pos === selectedPos ? " selected" : ""
-            }>${pos}</option>`;
+            html += `<option value="${pos}"${pos === selectedPos ? " selected" : ""
+                }>${pos}</option>`;
         });
         html += `</select></td>`;
 
@@ -1671,13 +1732,12 @@ async function loadMemos(reset = false) {
             <div class="memo-author">${escapeHtml(authorName)}</div>
             <div class="memo-header-right">
               <span class="memo-date">${createdAt}</span>
-              ${
-                  canDeleteMemo(data.authorId)
-                      ? '<button class="memo-delete-btn" data-id="' +
-                        doc.id +
-                        '">🗑</button>'
-                      : ""
-              }
+              ${canDeleteMemo(data.authorId)
+                ? '<button class="memo-delete-btn" data-id="' +
+                doc.id +
+                '">🗑</button>'
+                : ""
+            }
             </div>
           </div>
           <div class="memo-body">${escapeHtml(data.text || "")}</div>

@@ -398,6 +398,31 @@ small,
     line-height: 1.4;
 }
 
+/* イベント一覧のミニ出欠一覧 */
+.mini-attendance {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #555;
+    display: grid;
+    gap: 2px;
+}
+
+.mini-attendance-row {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+}
+
+.mini-attendance-label {
+    font-weight: 600;
+    min-width: 18px;
+}
+
+.mini-attendance-names {
+    color: #444;
+    word-break: break-word;
+}
+
 /* 日付・参加人数をスマホでは2段に見せる用 */
 .event-date,
 .event-stats {
@@ -444,16 +469,47 @@ small,
 }
 
 /* 左側に矢印アイコンを表示 */
-.past-events > summary::before {
-    content: "▶";
+.past-events[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+/* これからのイベントの「すべて表示」 */
+.upcoming-events-toggle {
+    margin-top: 12px;
+}
+
+.upcoming-events-toggle > summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #f1f6ff;
+    border-radius: 8px;
+    border: 1px solid #cfdaf3;
+    font-weight: 600;
+    color: #2b4b8a;
+    cursor: pointer;
+    list-style: none;
+}
+
+.upcoming-events-toggle[open] > summary {
+    background: #e6efff;
+}
+
+.upcoming-events-toggle > summary::-webkit-details-marker {
+    display: none;
+}
+
+.upcoming-events-toggle > summary::before {
+    content: "▼";
     font-size: 10px;
-    transform: rotate(0deg);
+    transform: rotate(-90deg);
     transition: transform 0.2s;
 }
 
-/* 開いたときは矢印を下向きに */
-.past-events[open] > summary::before {
-    transform: rotate(90deg);
+.upcoming-events-toggle[open] > summary::before {
+    transform: rotate(0deg);
 }
 
 /* ▼ 日付と参加人数を「ちょうど2段」にして、途中で折り返させない */
