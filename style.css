@@ -391,7 +391,7 @@ small,
     font-weight: 600;
 }
 
-.event-sub-info {
+ .event-sub-info {
     font-size: 12px;
     color: #666;
     margin-top: 2px;
@@ -469,6 +469,15 @@ small,
 }
 
 /* 左側に矢印アイコンを表示 */
+.past-events > summary::before {
+    content: "▶";
+    font-size: 10px;
+    transform: rotate(0deg);
+    transition: transform 0.2s;
+}
+
+
+/* 開いたときは矢印を下向きに */
 .past-events[open] > summary::before {
     transform: rotate(90deg);
 }

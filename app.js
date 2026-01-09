@@ -374,7 +374,6 @@ async function loadEventList() {
         });
 
         const miniAttendanceMap = {};
-        const countMap = {}; // eventId -> { present, late }
 
         attSnap.forEach((doc) => {
             const a = doc.data();
@@ -393,14 +392,6 @@ async function loadEventList() {
                 miniAttendanceMap[a.eventId][a.status].push(memberName);
             }
 
-            if (!countMap[a.eventId]) {
-                countMap[a.eventId] = { present: 0, late: 0 };
-            }
-            if (a.status === "present") {
-                countMap[a.eventId].present++;
-            } else if (a.status === "late") {
-                countMap[a.eventId].late++;
-            }
         });
 
         let upcomingRows = ""; // 今日以降
@@ -409,19 +400,21 @@ async function loadEventList() {
 
         const miniAttendanceHtml = (eventId) => {
             const statusRows = [
-                { key: "present", label: "◎" },
-                { key: "late", label: "〇" },
-                { key: "undecided", label: "△" },
-                { key: "absent", label: "✖" },
+                { key: "present", label: "◎", showNames: true },
+                { key: "late", label: "〇", showNames: true },
+                { key: "undecided", label: "△", showNames: false },
+                { key: "absent", label: "✖", showNames: false },
             ];
             return statusRows
-                .map(({ key, label }) => {
+                .map(({ key, label, showNames }) => {
                     const names = (miniAttendanceMap[eventId]?.[key] || [])
                         .slice()
                         .sort((a, b) => a.localeCompare(b, "ja-JP"));
-                    const nameText = names.length
-                        ? names.map((name) => escapeHtml(name)).join(", ")
-                        : "-";
+                    const nameText = showNames
+                        ? names.length
+                            ? names.map((name) => escapeHtml(name)).join(", ")
+                            : "-"
+                        : `${names.length}人`;
                     return `
             <div class="mini-attendance-row">
               <span class="mini-attendance-label">${label}</span>
@@ -446,11 +439,6 @@ async function loadEventList() {
             }
 
             // 参加人数カウント（◎ = present, ◯ = late）
-            const counts = countMap[id] || { present: 0, late: 0 };
-            const total = counts.present + counts.late;
-            const countLine1 = `${total}人`;
-            const countLine2 = `（◎${counts.present} / ◯${counts.late}）`;
-
             const time = data.time || "";
             const place = data.place || "";
             const title = data.title || "";
@@ -462,17 +450,13 @@ async function loadEventList() {
             <div>${escapeHtml(monthDayPart)}</div>
           </td>
           <td class="event-main">
-           <div class="event-title">${escapeHtml(title)}</div>
+            <div class="event-title">${escapeHtml(title)}</div>
             <div class="event-sub">${escapeHtml(time)}　｜　${escapeHtml(
                 place
             )}</div>
             <div class="mini-attendance">
               ${miniAttendanceHtml(id)}
             </div>
-          </td>
-          <td class="event-count">
-            <div>${escapeHtml(countLine1)}</div>
-            <div>${escapeHtml(countLine2)}</div>
           </td>
           <td class="event-action">
             <button class="open-event-btn" data-event-id="${id}">開く</button>
@@ -515,7 +499,6 @@ async function loadEventList() {
           <tr>
             <th>日付</th>
             <th>内容</th>
-            <th>参加人数</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -534,7 +517,6 @@ async function loadEventList() {
             <tr>
               <th>日付</th>
               <th>内容</th>
-              <th>参加人数</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -555,7 +537,6 @@ async function loadEventList() {
                        <tr>
                          <th>日付</th>
                          <th>内容</th>
-                         <th>参加人数</th>
                          <th>操作</th>
                        </tr>
                      </thead>
