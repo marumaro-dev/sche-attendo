@@ -72,6 +72,21 @@ function formatDateWithWeekdayString(dateStr) {
     return `${y}-${mm}-${dd}(${w})`;
 }
 
+// "YYYY-MM-DD" から曜日インデックス(0=日曜)を返す
+function getWeekdayIndex(dateStr) {
+    if (!dateStr) return null;
+    const base = dateStr.slice(0, 10);
+    const parts = base.split("-");
+    if (parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = parseInt(parts[2], 10);
+    if (!y || !m || !d) return null;
+    const dateObj = new Date(y, m - 1, d);
+    if (isNaN(dateObj.getTime())) return null;
+    return dateObj.getDay();
+}
+
 // 管理者の LINE userId
 const ADMIN_IDS = [
     "U046402ee4c1ae926ba9b5b2e950deedc",
@@ -438,6 +453,14 @@ async function loadEventList() {
                 monthDayPart = formattedDate.slice(5); // 12-21(日)
             }
 
+            const weekdayIndex = getWeekdayIndex(rawDateStr);
+            let weekdayClass = "";
+            if (weekdayIndex === 0) {
+                weekdayClass = " is-sun";
+            } else if (weekdayIndex === 6) {
+                weekdayClass = " is-sat";
+            }
+
             // 参加人数カウント（◎ = present, ◯ = late）
             const time = data.time || "";
             const place = data.place || "";
@@ -445,7 +468,7 @@ async function loadEventList() {
 
             const rowHtml = `
         <tr>
-          <td class="event-date">
+          <td class="event-date${weekdayClass}">
             <div>${escapeHtml(yearPart)}</div>
             <div>${escapeHtml(monthDayPart)}</div>
           </td>

@@ -529,6 +529,14 @@ small,
     padding: 4px 6px;
 }
 
+.event-date.is-sat {
+    color: #1565c0;
+}
+
+.event-date.is-sun {
+    color: #c62828;
+}
+
 /* 1段目（年／人数） */
 .event-date div:first-child,
 .event-count div:first-child {
