@@ -234,6 +234,28 @@ tr:nth-child(even) td {
     border: 1px solid #f5c3cf;
 }
 
+.notice-card {
+    background: #ffe3e3;
+    border: 1px solid #f1a9b0;
+}
+
+.notice-card h3 {
+    margin-top: 0;
+    font-size: 14px;
+    color: #8e0000;
+}
+
+.notice-card h4 {
+    margin: 12px 0 4px;
+    font-size: 13px;
+    color: #8e0000;
+}
+
+.notice-card p {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
 /* メモ入力まわり */
 .memo-input textarea {
     width: 100%;
@@ -715,6 +737,16 @@ small,
 #memo-list {
     margin-top: 12px;
     font-size: 13px;
+}
+
+#event-memo-list {
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+#event-memo-load-more-btn {
+    margin-top: 8px;
+    display: none;
 }
 
 #memo-load-more-btn {

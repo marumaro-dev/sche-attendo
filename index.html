@@ -62,6 +62,25 @@
                     自分の出欠をまとめて登録する
                 </button>
 
+                <div class="card notice-card">
+                    <h3>🗓 翌月分の出欠について</h3>
+                    <p>
+                        ・翌月分の出欠は、月末までにご回答をお願いします。
+                    </p>
+                    <h4>🔺「△（未定）」で回答している場合</h4>
+                    <p>
+                        ・活動日の1週間前までに、「〇」または「✕」へ変更をお願いします。<br />
+                        ・1週間を過ぎてから「✕」へ変更する場合は、中橋まで一言ご連絡ください。<br />
+                        ※「〇」への変更は連絡不要です。
+                    </p>
+                    <h4>⏰ 直前まで参加可否が分からない場合</h4>
+                    <p>
+                        ・いつ頃までに判断できそうかを、中橋までご連絡ください。<br />
+                        ・お仕事やご家庭の事情で毎回直前になりやすい方は、<br />
+                        　一度ご相談いただければ、以降は未定連絡は不要とします。
+                    </p>
+                </div>
+
                 <!-- イベント一覧 -->
                 <div id="event-list">読み込み中…</div>
 
@@ -281,6 +300,34 @@
                     <button data-status="late">〇 遅刻</button>
                     <button data-status="undecided">△ 未定</button>
                     <button data-status="absent">✖ 欠席</button>
+                </div>
+
+                <div id="event-memo-card" class="card" style="margin-top: 16px">
+                    <h2>イベントメモ</h2>
+                    <p class="note-text">
+                        個々人がイベントごとにメモを残せます。
+                    </p>
+                    <div class="memo-input">
+                        <textarea
+                            id="event-memo-input"
+                            rows="3"
+                            placeholder="例：仕事の都合で当日ギリギリになりそうです"
+                        ></textarea>
+                        <button
+                            id="event-memo-submit-btn"
+                            class="pill-button"
+                        >
+                            メモを投稿する
+                        </button>
+                    </div>
+                    <div id="event-memo-list">まだメモはありません。</div>
+                    <button
+                        id="event-memo-load-more-btn"
+                        class="ghost-button"
+                        style="margin-top: 8px"
+                    >
+                        もっと見る
+                    </button>
                 </div>
 
                 <h2 style="margin-top: 16px">メンバーの出欠状況</h2>

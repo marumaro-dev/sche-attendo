@@ -1563,6 +1563,11 @@ const MEMO_PAGE_SIZE = 10; // 一度に読み込む件数
 let memoLastVisible = null; // 最後に取得したドキュメント
 let memoListInitialized = false; // イベント委譲の初期化フラグ
 
+// イベントメモ用
+const EVENT_MEMO_PAGE_SIZE = 10;
+let eventMemoLastVisible = null;
+let eventMemoListInitialized = false;
+
 // メモカードのセットアップ（一覧モードで呼び出す）
 function setupMemoSection() {
     const card = document.getElementById("memo-card");
@@ -1663,6 +1668,206 @@ function setupMemoSection() {
     // 初回ロード
     memoLastVisible = null;
     loadMemos(true);
+}
+
+// ========== イベントメモ ==========
+function setupEventMemoSection() {
+    const card = document.getElementById("event-memo-card");
+    const textarea = document.getElementById("event-memo-input");
+    const submitBtn = document.getElementById("event-memo-submit-btn");
+    const moreBtn = document.getElementById("event-memo-load-more-btn");
+    const listDiv = document.getElementById("event-memo-list");
+
+    if (
+        !card ||
+        !textarea ||
+        !submitBtn ||
+        !moreBtn ||
+        !listDiv ||
+        !currentEventId
+    ) {
+        return;
+    }
+
+    if (!eventMemoListInitialized) {
+        eventMemoListInitialized = true;
+
+        listDiv.addEventListener("click", async (e) => {
+            const target = e.target;
+            if (target.classList.contains("memo-toggle-btn")) {
+                const item = target.closest(".memo-item");
+                const body = item.querySelector(".memo-body");
+                if (!body) return;
+                const expanded = body.classList.toggle("expanded");
+                target.textContent = expanded ? "閉じる" : "続きを読む";
+                return;
+            }
+
+            if (target.classList.contains("memo-delete-btn")) {
+                const memoId = target.dataset.id;
+                if (!memoId) return;
+                if (!confirm("このメモを削除しますか？")) return;
+
+                try {
+                    await db.collection("eventMemos").doc(memoId).delete();
+                    const item = target.closest(".memo-item");
+                    if (item) item.remove();
+                } catch (err) {
+                    console.error(err);
+                    alert("メモの削除に失敗しました。");
+                }
+            }
+        });
+    }
+
+    submitBtn.addEventListener("click", async () => {
+        const text = textarea.value.trim();
+        if (!text) {
+            alert("メモを入力してください。");
+            return;
+        }
+        if (!currentUser) {
+            alert("LINEログイン情報が取得できません。");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "送信中...";
+
+        try {
+            let authorName = currentUser.displayName || "Unknown";
+            const mDoc = await db
+                .collection("members")
+                .doc(currentUser.lineUserId)
+                .get();
+            if (mDoc.exists && mDoc.data().name) {
+                authorName = mDoc.data().name;
+            }
+
+            await db.collection("eventMemos").add({
+                eventId: currentEventId,
+                text,
+                authorId: currentUser.lineUserId,
+                authorName,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+            textarea.value = "";
+            eventMemoLastVisible = null;
+            await loadEventMemos(true);
+        } catch (err) {
+            console.error(err);
+            alert("メモの投稿に失敗しました。");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "メモを投稿する";
+        }
+    });
+
+    moreBtn.addEventListener("click", async () => {
+        await loadEventMemos(false);
+    });
+
+    eventMemoLastVisible = null;
+    loadEventMemos(true);
+}
+
+async function loadEventMemos(reset = false) {
+    const listDiv = document.getElementById("event-memo-list");
+    const moreBtn = document.getElementById("event-memo-load-more-btn");
+    if (!listDiv || !currentEventId) return;
+
+    if (reset) {
+        listDiv.innerHTML = "";
+        eventMemoLastVisible = null;
+    }
+
+    const membersSnap = await db.collection("members").get();
+    const memberNameMap = {};
+    membersSnap.forEach((mDoc) => {
+        const m = mDoc.data();
+        memberNameMap[mDoc.id] = (m && m.name) || null;
+    });
+
+    let query = db
+        .collection("eventMemos")
+        .where("eventId", "==", currentEventId)
+        .orderBy("createdAt", "desc")
+        .limit(EVENT_MEMO_PAGE_SIZE);
+
+    if (eventMemoLastVisible) {
+        query = query.startAfter(eventMemoLastVisible);
+    }
+
+    const snap = await query.get();
+    if (snap.empty) {
+        if (reset) {
+            listDiv.innerHTML = "<p>まだメモはありません。</p>";
+        }
+        if (moreBtn) moreBtn.style.display = "none";
+        return;
+    }
+
+    eventMemoLastVisible = snap.docs[snap.docs.length - 1];
+
+    snap.forEach((doc) => {
+        const data = doc.data();
+        const fromMembers = memberNameMap[data.authorId];
+        const authorName = fromMembers || data.authorName || "Unknown";
+
+        const item = document.createElement("div");
+        item.className = "memo-item";
+
+        const createdAt = data.createdAt
+            ? formatDateTime(data.createdAt.toDate())
+            : "";
+
+        item.innerHTML = `
+          <div class="memo-header">
+            <div class="memo-author">${escapeHtml(authorName)}</div>
+            <div class="memo-header-right">
+              <span class="memo-date">${createdAt}</span>
+              ${
+                  canDeleteMemo(data.authorId)
+                      ? '<button class="memo-delete-btn" data-id="' +
+                        doc.id +
+                        '">🗑</button>'
+                      : ""
+              }
+            </div>
+          </div>
+          <div class="memo-body">${escapeHtml(data.text || "")}</div>
+          <button class="memo-toggle-btn">続きを読む</button>
+        `;
+
+        const bodyEl = item.querySelector(".memo-body");
+        const toggleBtn = item.querySelector(".memo-toggle-btn");
+        toggleBtn.addEventListener("click", () => {
+            bodyEl.classList.toggle("expanded");
+            toggleBtn.textContent = bodyEl.classList.contains("expanded")
+                ? "閉じる"
+                : "続きを読む";
+        });
+
+        const delBtn = item.querySelector(".memo-delete-btn");
+        if (delBtn) {
+            delBtn.addEventListener("click", async () => {
+                if (!confirm("このメモを削除しますか？")) return;
+                await db.collection("eventMemos").doc(doc.id).delete();
+                await loadEventMemos(true);
+            });
+        }
+
+        listDiv.appendChild(item);
+    });
+
+    if (moreBtn) {
+        if (snap.size < EVENT_MEMO_PAGE_SIZE) {
+            moreBtn.style.display = "none";
+        } else {
+            moreBtn.style.display = "inline-block";
+        }
+    }
 }
 
 // メモを削除できるかどうか判定
@@ -1835,6 +2040,7 @@ async function main() {
 
             setupBackButton();
             await loadEvent();
+            setupEventMemoSection();
             await loadAttendanceList();
             setupButtons();
         }
