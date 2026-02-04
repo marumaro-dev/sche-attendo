@@ -1565,8 +1565,8 @@ let memoListInitialized = false; // イベント委譲の初期化フラグ
 
 // イベントメモ用
 const EVENT_MEMO_PAGE_SIZE = 10;
-let eventMemoLastVisible = null;
 let eventMemoListInitialized = false;
+let eventMemoVisibleCount = EVENT_MEMO_PAGE_SIZE;
 
 // メモカードのセットアップ（一覧モードで呼び出す）
 function setupMemoSection() {
@@ -1753,7 +1753,6 @@ function setupEventMemoSection() {
             });
 
             textarea.value = "";
-            eventMemoLastVisible = null;
             await loadEventMemos(true);
         } catch (err) {
             console.error(err);
@@ -1765,10 +1764,11 @@ function setupEventMemoSection() {
     });
 
     moreBtn.addEventListener("click", async () => {
+        eventMemoVisibleCount += EVENT_MEMO_PAGE_SIZE;
         await loadEventMemos(false);
     });
 
-    eventMemoLastVisible = null;
+    eventMemoVisibleCount = EVENT_MEMO_PAGE_SIZE;
     loadEventMemos(true);
 }
 
@@ -1779,7 +1779,7 @@ async function loadEventMemos(reset = false) {
 
     if (reset) {
         listDiv.innerHTML = "";
-        eventMemoLastVisible = null;
+        eventMemoVisibleCount = EVENT_MEMO_PAGE_SIZE;
     }
 
     const membersSnap = await db.collection("members").get();
@@ -1789,17 +1789,10 @@ async function loadEventMemos(reset = false) {
         memberNameMap[mDoc.id] = (m && m.name) || null;
     });
 
-    let query = db
+    const snap = await db
         .collection("eventMemos")
         .where("eventId", "==", currentEventId)
-        .orderBy("createdAt", "desc")
-        .limit(EVENT_MEMO_PAGE_SIZE);
-
-    if (eventMemoLastVisible) {
-        query = query.startAfter(eventMemoLastVisible);
-    }
-
-    const snap = await query.get();
+        .get();
     if (snap.empty) {
         if (reset) {
             listDiv.innerHTML = "<p>まだメモはありません。</p>";
@@ -1808,10 +1801,17 @@ async function loadEventMemos(reset = false) {
         return;
     }
 
-    eventMemoLastVisible = snap.docs[snap.docs.length - 1];
+    const memoItems = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => {
+            const aTime = a.createdAt ? a.createdAt.toMillis() : 0;
+            const bTime = b.createdAt ? b.createdAt.toMillis() : 0;
+            return bTime - aTime;
+        });
+    const visibleItems = memoItems.slice(0, eventMemoVisibleCount);
 
-    snap.forEach((doc) => {
-        const data = doc.data();
+     listDiv.innerHTML = "";
+    visibleItems.forEach((data) => {
         const fromMembers = memberNameMap[data.authorId];
         const authorName = fromMembers || data.authorName || "Unknown";
 
@@ -1830,7 +1830,7 @@ async function loadEventMemos(reset = false) {
               ${
                   canDeleteMemo(data.authorId)
                       ? '<button class="memo-delete-btn" data-id="' +
-                        doc.id +
+                        data.id +
                         '">🗑</button>'
                       : ""
               }
@@ -1853,7 +1853,7 @@ async function loadEventMemos(reset = false) {
         if (delBtn) {
             delBtn.addEventListener("click", async () => {
                 if (!confirm("このメモを削除しますか？")) return;
-                await db.collection("eventMemos").doc(doc.id).delete();
+                await db.collection("eventMemos").doc(data.id).delete();
                 await loadEventMemos(true);
             });
         }
@@ -1862,7 +1862,7 @@ async function loadEventMemos(reset = false) {
     });
 
     if (moreBtn) {
-        if (snap.size < EVENT_MEMO_PAGE_SIZE) {
+        if (memoItems.length <= eventMemoVisibleCount) {
             moreBtn.style.display = "none";
         } else {
             moreBtn.style.display = "inline-block";
