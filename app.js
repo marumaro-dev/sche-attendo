@@ -1710,8 +1710,7 @@ function setupEventMemoSection() {
 
                 try {
                     await db.collection("eventMemos").doc(memoId).delete();
-                    const item = target.closest(".memo-item");
-                    if (item) item.remove();
+                    await loadEventMemos(true);
                 } catch (err) {
                     console.error(err);
                     alert("メモの削除に失敗しました。");
