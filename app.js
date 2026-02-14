@@ -233,12 +233,14 @@ async function loadMyAttendance() {
         <td>${escapeHtml(e.title || "")}</td>
         <td>
           <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
-            <button class="my-att-btn ${status === "present" ? "is-present" : ""
+            <button class="my-att-btn ${
+                status === "present" ? "is-present" : ""
             }"
               data-event-id="${eventId}" data-status="present">◎</button>
             <button class="my-att-btn ${status === "late" ? "is-late" : ""}"
               data-event-id="${eventId}" data-status="late">〇</button>
-            <button class="my-att-btn ${status === "undecided" ? "is-undecided" : ""
+            <button class="my-att-btn ${
+                status === "undecided" ? "is-undecided" : ""
             }"
               data-event-id="${eventId}" data-status="undecided">△</button>
             <button class="my-att-btn ${status === "absent" ? "is-absent" : ""}"
@@ -291,8 +293,9 @@ async function loadMyAttendance() {
     html += `
       <details class="past-events" ${upcomingRows ? "" : "open"}>
         <summary>過去のイベントを表示 / 非表示</summary>
-        ${pastRows
-            ? `<table class="my-att-table" style="margin-top: 8px;">
+        ${
+            pastRows
+                ? `<table class="my-att-table" style="margin-top: 8px;">
                      <thead>
                        <tr>
                          <th>日付</th>
@@ -304,7 +307,7 @@ async function loadMyAttendance() {
                        ${pastRows}
                      </tbody>
                    </table>`
-            : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
+                : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
         }
       </details>`;
 
@@ -554,7 +557,8 @@ async function loadEventList() {
         html += `
       <details class="past-events" ${upcomingRows ? "" : "open"}>
         <summary>過去のイベントを表示 / 非表示</summary>
-        ${pastRows
+        ${
+            pastRows
                 ? `<table class="event-table" style="margin-top: 8px;">
                      <thead>
                        <tr>
@@ -568,11 +572,10 @@ async function loadEventList() {
                      </tbody>
                    </table>`
                 : `<p style="margin-top:8px;">過去のイベントはありません。</p>`
-            }
+        }
       </details>`;
 
         listDiv.innerHTML = html;
-
         // 「開く」ボタンにイベントIDを紐付け
         listDiv.querySelectorAll(".open-event-btn").forEach((btn) => {
             btn.addEventListener("click", (e) => {
@@ -594,7 +597,6 @@ async function loadEventList() {
 function setupBackButton() {
     const backBtn = document.getElementById("back-to-list-btn");
     if (!backBtn) return;
-
     backBtn.addEventListener("click", () => {
         location.search = ""; // クエリを消して再読み込み → 一覧モード
     });
@@ -619,10 +621,10 @@ async function loadEvent() {
     const data = snap.data();
     currentEventData = { id: currentEventId, ...data }; // ★ ここで保持
 
-    const typeLabel = convertEventTypeLabel(data.type);
+        const typeLabel = convertEventTypeLabel(data.type);
     const displayDate = formatDateWithWeekdayString(data.date || "");
 
-    eventDiv.innerHTML = `
+            eventDiv.innerHTML = `
 <p><strong>試合名：</strong>${escapeHtml(data.title || "")}</p>
 <p><strong>日時：</strong>${escapeHtml(displayDate)} ${escapeHtml(
         data.time || ""
@@ -631,28 +633,28 @@ async function loadEvent() {
     ${typeLabel ? `<p><strong>種別：</strong>${escapeHtml(typeLabel)}</p>` : ""}
     <p><strong>メモ：</strong>${escapeHtml(data.note || "")}</p>`;
 
-    // ★ 種別に応じてオーダーエリアを表示
+                 // ★ 種別に応じてオーダーエリアを表示
     await setupLineupSectionIfNeeded();
 }
 
-// ========== 出欠一覧 ==========
+    // ========== 出欠一覧 ==========
 async function loadAttendanceList() {
     const listDiv = document.getElementById("attendance-list");
     listDiv.innerHTML = "読み込み中…";
 
-    const membersSnap = await db.collection("members").get();
+        const membersSnap = await db.collection("members").get();
     const attendanceSnap = await db
         .collection("attendance")
         .where("eventId", "==", currentEventId)
         .get();
 
-    const statusMap = {};
+        const statusMap = {};
     attendanceSnap.forEach((doc) => {
         const a = doc.data();
         statusMap[a.lineUserId] = a.status;
     });
 
-    const counters = {
+            const counters = {
         present: 0,
         late: 0,
         undecided: 0,
@@ -660,7 +662,7 @@ async function loadAttendanceList() {
         no_response: 0,
     };
 
-    let html =
+             let html =
         "<table border='1' style='border-collapse: collapse; width: 100%;'>";
     html += "<tr><th>メンバー</th><th>ステータス</th></tr>";
 
@@ -675,7 +677,7 @@ async function loadAttendanceList() {
             counters.no_response++;
         }
 
-        const { label, color } = convertStatusToLabel(status);
+    const { label, color } = convertStatusToLabel(status);
 
         html += `
       <tr>
@@ -684,7 +686,7 @@ async function loadAttendanceList() {
       </tr>`;
     });
 
-    html += "</table>";
+     html += "</table>";
     listDiv.innerHTML = html;
 
     // 集計表示
@@ -701,7 +703,7 @@ async function loadAttendanceList() {
 
 // ========== オーダー（ラインナップ） ==========
 
-// 種別が 公式戦 or 練習試合 のときだけオーダーを表示
+    // 種別が 公式戦 or 練習試合 のときだけオーダーを表示
 async function setupLineupSectionIfNeeded() {
     const block = document.getElementById("lineup-block");
     const editor = document.getElementById("lineup-editor");
@@ -811,27 +813,35 @@ async function loadLineupEditor() {
         <div class="lineup-system-row">
           <label>打順人数
             <select id="lineup-system-select">
-              <option value="NORMAL9"${system === "NORMAL9" ? " selected" : ""
-            }>9人制</option>
-              <option value="DH10"${system === "DH10" ? " selected" : ""
-            }>DH制（10人打ち）</option>
-              <option value="DH11"${system === "DH11" ? " selected" : ""
-            }>DH制（11人打ち）</option>
-              <option value="DH12"${system === "DH12" ? " selected" : ""
-            }>DH制（12人打ち）</option>
-              <option value="DH13"${system === "DH13" ? " selected" : ""
-            }>DH制（13人打ち）</option>
-              <option value="DH14"${system === "DH14" ? " selected" : ""
-            }>DH制（14人打ち）</option>
-              <option value="DH15"${system === "DH15" ? " selected" : ""
-            }>DH制（15人打ち）</option>
+              <option value="NORMAL9"${
+                  system === "NORMAL9" ? " selected" : ""
+              }>9人制</option>
+              <option value="DH10"${
+                  system === "DH10" ? " selected" : ""
+              }>DH制（10人打ち）</option>
+              <option value="DH11"${
+                  system === "DH11" ? " selected" : ""
+              }>DH制（11人打ち）</option>
+              <option value="DH12"${
+                  system === "DH12" ? " selected" : ""
+              }>DH制（12人打ち）</option>
+              <option value="DH13"${
+                  system === "DH13" ? " selected" : ""
+              }>DH制（13人打ち）</option>
+              <option value="DH14"${
+                  system === "DH14" ? " selected" : ""
+              }>DH制（14人打ち）</option>
+              <option value="DH15"${
+                  system === "DH15" ? " selected" : ""
+              }>DH制（15人打ち）</option>
             </select>
           </label>
         </div>
 
         <div class="lineup-publish-row">
           <label>
-            <input type="checkbox" id="lineup-publish-checkbox"${isPublished ? " checked" : ""
+            <input type="checkbox" id="lineup-publish-checkbox"${
+                isPublished ? " checked" : ""
             }>
             オーダーをメンバーに公開する
           </label>
@@ -843,8 +853,8 @@ async function loadLineupEditor() {
           <label>メモ（継投・守備変更など）
             <textarea id="lineup-memo" rows="2"
               placeholder="例: 永久ベンチ→中橋、三振したら#21交代">${escapeHtml(
-                memo
-            )}</textarea>
+                  memo
+              )}</textarea>
           </label>
         </div>
       `;
@@ -905,8 +915,9 @@ function renderLineupRows(system) {
         html += `<td><select class="lineup-player-select">`;
         html += `<option value="">（選手を選択）</option>`;
         lineupCandidates.forEach((m) => {
-            html += `<option value="${m.id}"${m.id === selectedMemberId ? " selected" : ""
-                }>${escapeHtml(m.name)}</option>`;
+            html += `<option value="${m.id}"${
+                m.id === selectedMemberId ? " selected" : ""
+            }>${escapeHtml(m.name)}</option>`;
         });
         html += `</select></td>`;
 
@@ -914,8 +925,9 @@ function renderLineupRows(system) {
         html += `<td><select class="lineup-pos-select">`;
         html += `<option value="">ー</option>`;
         positions.forEach((pos) => {
-            html += `<option value="${pos}"${pos === selectedPos ? " selected" : ""
-                }>${pos}</option>`;
+            html += `<option value="${pos}"${
+                pos === selectedPos ? " selected" : ""
+            }>${pos}</option>`;
         });
         html += `</select></td>`;
 
@@ -1589,6 +1601,7 @@ function setupMemoSection() {
             // 続きを読む／閉じる
             if (target.classList.contains("memo-toggle-btn")) {
                 const item = target.closest(".memo-item");
+                if (!item) return;
                 const body = item.querySelector(".memo-body");
                 if (!body) return;
                 const expanded = body.classList.toggle("expanded");
@@ -1696,6 +1709,7 @@ function setupEventMemoSection() {
             const target = e.target;
             if (target.classList.contains("memo-toggle-btn")) {
                 const item = target.closest(".memo-item");
+                if (!item) return;
                 const body = item.querySelector(".memo-body");
                 if (!body) return;
                 const expanded = body.classList.toggle("expanded");
@@ -1799,7 +1813,6 @@ async function loadEventMemos(reset = false) {
         if (moreBtn) moreBtn.style.display = "none";
         return;
     }
-
     const memoItems = snap.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .sort((a, b) => {
@@ -1940,37 +1953,18 @@ async function loadMemos(reset = false) {
             <div class="memo-author">${escapeHtml(authorName)}</div>
             <div class="memo-header-right">
               <span class="memo-date">${createdAt}</span>
-              ${canDeleteMemo(data.authorId)
-                ? '<button class="memo-delete-btn" data-id="' +
-                doc.id +
-                '">🗑</button>'
-                : ""
-            }
+              ${
+                  canDeleteMemo(data.authorId)
+                      ? '<button class="memo-delete-btn" data-id="' +
+                        doc.id +
+                        '">🗑</button>'
+                      : ""
+              }
             </div>
           </div>
           <div class="memo-body">${escapeHtml(data.text || "")}</div>
           <button class="memo-toggle-btn">続きを読む</button>
         `;
-
-        // 「続きを読む」トグル
-        const bodyEl = item.querySelector(".memo-body");
-        const toggleBtn = item.querySelector(".memo-toggle-btn");
-        toggleBtn.addEventListener("click", () => {
-            bodyEl.classList.toggle("expanded");
-            toggleBtn.textContent = bodyEl.classList.contains("expanded")
-                ? "閉じる"
-                : "続きを読む";
-        });
-
-        // 🗑ボタン（あれば）に削除処理を付与
-        const delBtn = item.querySelector(".memo-delete-btn");
-        if (delBtn) {
-            delBtn.addEventListener("click", async () => {
-                if (!confirm("このメモを削除しますか？")) return;
-                await db.collection("memos").doc(doc.id).delete();
-                await loadMemos(true); // 再読み込み
-            });
-        }
 
         listDiv.appendChild(item);
     });
