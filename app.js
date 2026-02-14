@@ -1708,14 +1708,23 @@ function setupEventMemoSection() {
 
     if (!eventMemoListInitialized) {
         eventMemoListInitialized = true;
+         let lastTouchEndAt = 0;
 
          const handleEventMemoTap = async (e) => {
             const target = e.target;
             if (!(target instanceof Element)) return;
 
+            if (e.type === "click" && Date.now() - lastTouchEndAt < 700) {
+                return;
+            }
+            if (e.type === "touchend") {
+                lastTouchEndAt = Date.now();
+                e.preventDefault();
+            }
+
+
              const toggleBtn = target.closest(".memo-toggle-btn");
             if (toggleBtn && listDiv.contains(toggleBtn)) {
-                if (e.type === "touchend") e.preventDefault();
                 const item = toggleBtn.closest(".memo-item");
                 if (!item) return;
                 const body = item.querySelector(".memo-body");
@@ -1726,9 +1735,7 @@ function setupEventMemoSection() {
             }
 
             const deleteBtn = target.closest(".memo-delete-btn");
-
             if (deleteBtn && listDiv.contains(deleteBtn)) {
-                 if (e.type === "touchend") e.preventDefault();
                 const memoId = deleteBtn.dataset.id;
                 if (!memoId) return;
                 if (!confirm("このメモを削除しますか？")) return;
@@ -1744,7 +1751,9 @@ function setupEventMemoSection() {
         
              };
          listDiv.addEventListener("click", handleEventMemoTap);
-        listDiv.addEventListener("touchend", handleEventMemoTap, { passive: false });
+        listDiv.addEventListener("touchend", handleEventMemoTap, {
+            passive: false,
+        });
     }
 
     submitBtn.addEventListener("click", async () => {
