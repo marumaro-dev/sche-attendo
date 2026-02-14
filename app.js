@@ -1713,18 +1713,7 @@ function setupEventMemoSection() {
             const target = e.target;
             if (!(target instanceof Element)) return;
 
-            const toggleBtn = target.closest(".memo-toggle-btn");
             const deleteBtn = target.closest(".memo-delete-btn");
-
-            if (toggleBtn && listDiv.contains(toggleBtn)) {
-                const item = toggleBtn.closest(".memo-item");
-                if (!item) return;
-                const body = item.querySelector(".memo-body");
-                if (!body) return;
-                const expanded = body.classList.toggle("expanded");
-               toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
-                return;
-            }
 
             if (deleteBtn && listDiv.contains(deleteBtn)) {
                 const memoId = deleteBtn.dataset.id;
@@ -1858,24 +1847,15 @@ async function loadEventMemos(reset = false) {
             </div>
           </div>
           <div class="memo-body">${escapeHtml(data.text || "")}</div>
-          <button class="memo-toggle-btn">続きを読む</button>
+          <button type="button" class="memo-toggle-btn">続きを読む</button>
         `;
 
-        const bodyEl = item.querySelector(".memo-body");
+         const bodyEl = item.querySelector(".memo-body");
         const toggleBtn = item.querySelector(".memo-toggle-btn");
-        toggleBtn.addEventListener("click", () => {
-            bodyEl.classList.toggle("expanded");
-            toggleBtn.textContent = bodyEl.classList.contains("expanded")
-                ? "閉じる"
-                : "続きを読む";
-        });
-
-        const delBtn = item.querySelector(".memo-delete-btn");
-        if (delBtn) {
-            delBtn.addEventListener("click", async () => {
-                if (!confirm("このメモを削除しますか？")) return;
-                await db.collection("eventMemos").doc(data.id).delete();
-                await loadEventMemos(true);
+        if (bodyEl && toggleBtn) {
+            toggleBtn.addEventListener("click", () => {
+                const expanded = bodyEl.classList.toggle("expanded");
+                toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
             });
         }
 
