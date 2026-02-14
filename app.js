@@ -1709,13 +1709,26 @@ function setupEventMemoSection() {
     if (!eventMemoListInitialized) {
         eventMemoListInitialized = true;
 
-        listDiv.addEventListener("click", async (e) => {
+         const handleEventMemoTap = async (e) => {
             const target = e.target;
             if (!(target instanceof Element)) return;
+
+             const toggleBtn = target.closest(".memo-toggle-btn");
+            if (toggleBtn && listDiv.contains(toggleBtn)) {
+                if (e.type === "touchend") e.preventDefault();
+                const item = toggleBtn.closest(".memo-item");
+                if (!item) return;
+                const body = item.querySelector(".memo-body");
+                if (!body) return;
+                const expanded = body.classList.toggle("expanded");
+                toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
+                return;
+            }
 
             const deleteBtn = target.closest(".memo-delete-btn");
 
             if (deleteBtn && listDiv.contains(deleteBtn)) {
+                 if (e.type === "touchend") e.preventDefault();
                 const memoId = deleteBtn.dataset.id;
                 if (!memoId) return;
                 if (!confirm("このメモを削除しますか？")) return;
@@ -1728,7 +1741,10 @@ function setupEventMemoSection() {
                     alert("メモの削除に失敗しました。");
                 }
             }
-        });
+        
+             };
+         listDiv.addEventListener("click", handleEventMemoTap);
+        listDiv.addEventListener("touchend", handleEventMemoTap, { passive: false });
     }
 
     submitBtn.addEventListener("click", async () => {
@@ -1849,15 +1865,6 @@ async function loadEventMemos(reset = false) {
           <div class="memo-body">${escapeHtml(data.text || "")}</div>
           <button type="button" class="memo-toggle-btn">続きを読む</button>
         `;
-
-         const bodyEl = item.querySelector(".memo-body");
-        const toggleBtn = item.querySelector(".memo-toggle-btn");
-        if (bodyEl && toggleBtn) {
-            toggleBtn.addEventListener("click", () => {
-                const expanded = bodyEl.classList.toggle("expanded");
-                toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
-            });
-        }
 
         listDiv.appendChild(item);
     });
