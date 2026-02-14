@@ -1597,27 +1597,31 @@ function setupMemoSection() {
         // 「続きを読む」/「閉じる」と 🗑ボタン の処理
         listDiv.addEventListener("click", async (e) => {
             const target = e.target;
+            if (!(target instanceof Element)) return;
+
+            const toggleBtn = target.closest(".memo-toggle-btn");
+            const deleteBtn = target.closest(".memo-delete-btn");
 
             // 続きを読む／閉じる
-            if (target.classList.contains("memo-toggle-btn")) {
-                const item = target.closest(".memo-item");
+            if (toggleBtn && listDiv.contains(toggleBtn)) {
+                const item = toggleBtn.closest(".memo-item");
                 if (!item) return;
                 const body = item.querySelector(".memo-body");
                 if (!body) return;
                 const expanded = body.classList.toggle("expanded");
-                target.textContent = expanded ? "閉じる" : "続きを読む";
+                toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
                 return;
             }
 
             // 削除
-            if (target.classList.contains("memo-delete-btn")) {
-                const memoId = target.dataset.id;
+            if (deleteBtn && listDiv.contains(deleteBtn)) {
+                const memoId = deleteBtn.dataset.id;
                 if (!memoId) return;
                 if (!confirm("このメモを削除しますか？")) return;
 
                 try {
                     await db.collection("memos").doc(memoId).delete();
-                    const item = target.closest(".memo-item");
+                    const item = deleteBtn.closest(".memo-item");
                     if (item) item.remove();
                 } catch (err) {
                     console.error(err);
@@ -1707,18 +1711,23 @@ function setupEventMemoSection() {
 
         listDiv.addEventListener("click", async (e) => {
             const target = e.target;
-            if (target.classList.contains("memo-toggle-btn")) {
-                const item = target.closest(".memo-item");
+            if (!(target instanceof Element)) return;
+
+            const toggleBtn = target.closest(".memo-toggle-btn");
+            const deleteBtn = target.closest(".memo-delete-btn");
+
+            if (toggleBtn && listDiv.contains(toggleBtn)) {
+                const item = toggleBtn.closest(".memo-item");
                 if (!item) return;
                 const body = item.querySelector(".memo-body");
                 if (!body) return;
                 const expanded = body.classList.toggle("expanded");
-                target.textContent = expanded ? "閉じる" : "続きを読む";
+               toggleBtn.textContent = expanded ? "閉じる" : "続きを読む";
                 return;
             }
 
-            if (target.classList.contains("memo-delete-btn")) {
-                const memoId = target.dataset.id;
+            if (deleteBtn && listDiv.contains(deleteBtn)) {
+                const memoId = deleteBtn.dataset.id;
                 if (!memoId) return;
                 if (!confirm("このメモを削除しますか？")) return;
 
